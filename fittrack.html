@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#080a0f">
+<title>FitTrack Pro</title>
+<link rel="manifest" href="/manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+/* ── TOKENS ───────────────────────────────────────────────────────── */
+:root {
+  --bg: #080a0f;
+  --s1: #0f1219;
+  --s2: #161b26;
+  --s3: #1e2535;
+  --b1: #252f42;
+  --b2: #2e3d58;
+  --lime: #c8f135;
+  --lime2: #a8d020;
+  --red: #ff3b5c;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --orange: #f97316;
+  --green: #22c55e;
+  --t1: #f0f4ff;
+  --t2: #7a8ba8;
+  --t3: #3d4f6b;
+  --r: 8px;
+  --r2: 16px;
+  --r3: 24px;
+  --fd: 'Space Grotesk', sans-serif;
+  --fm: 'Space Mono', monospace;
+}
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { min-height: 100%; background: var(--bg); color: var(--t1); font-family: var(--fd); font-size: 14px; overflow-x: hidden; }
+::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-track { background: var(--s1); } ::-webkit-scrollbar-thumb { background: var(--b2); border-radius: 2px; }
+
+/* ── LAYOUT ───────────────────────────────────────────────────────── */
+#app { min-height: 100vh; display: flex; flex-direction: column; }
+#main { flex: 1; padding: 16px 16px 80px; max-width: 640px; margin: 0 auto; width: 100%; }
+@media (min-width: 768px) { #app { flex-direction: row; } #main { margin-left: 80px; padding: 28px 32px; max-width: 960px; } }
+
+/* ── NAV ──────────────────────────────────────────────────────────── */
+#nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--s1); border-top: 1px solid var(--b1); display: flex; z-index: 100; height: 64px; }
+@media (min-width: 768px) { #nav { top: 0; left: 0; bottom: 0; right: auto; width: 80px; flex-direction: column; border-top: none; border-right: 1px solid var(--b1); height: auto; padding: 16px 0; } }
+.nb { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: none; border: none; color: var(--t3); cursor: pointer; font-family: var(--fd); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: 6px 2px; transition: color .15s; }
+@media (min-width: 768px) { .nb { flex: 0; padding: 16px 8px; } }
+.nb:hover { color: var(--t2); }
+.nb.on { color: var(--lime); }
+.nb.on .nb-icon { background: rgba(200,241,53,.1); }
+.nb-icon { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+.nb svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── TYPOGRAPHY ───────────────────────────────────────────────────── */
+.page-title { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.page-sub { font-size: 13px; color: var(--t2); margin-bottom: 20px; }
+.section-title { font-family: var(--fm); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--t3); margin: 20px 0 10px; }
+.section-title:first-child { margin-top: 0; }
+
+/* ── CARDS ────────────────────────────────────────────────────────── */
+.card { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r2); padding: 16px; margin-bottom: 12px; }
+.card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--t2); margin-bottom: 12px; }
+
+/* ── STAT CARDS ───────────────────────────────────────────────────── */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.stat-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.stat-card { background: var(--s2); border: 1px solid var(--b1); border-radius: var(--r2); padding: 14px; }
+.stat-val { font-family: var(--fm); font-size: 28px; font-weight: 700; line-height: 1; color: var(--lime); }
+.stat-val.red { color: var(--red); }
+.stat-val.blue { color: var(--blue); }
+.stat-val.purple { color: var(--purple); }
+.stat-val.orange { color: var(--orange); }
+.stat-label { font-size: 11px; color: var(--t3); text-transform: uppercase; letter-spacing: .08em; margin-top: 4px; font-weight: 600; }
+
+/* ── FIELDS ───────────────────────────────────────────────────────── */
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--t2); margin-bottom: 6px; }
+.field input, .field select, .field textarea { width: 100%; background: var(--s2); border: 1px solid var(--b1); border-radius: var(--r); color: var(--t1); padding: 11px 14px; font-size: 14px; outline: none; font-family: var(--fd); transition: border-color .15s; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--lime); }
+.field select option { background: var(--s2); }
+.field textarea { resize: vertical; min-height: 80px; }
+.field .hint { font-size: 11px; color: var(--t3); margin-top: 4px; }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+/* ── BUTTONS ──────────────────────────────────────────────────────── */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border-radius: var(--r); border: none; cursor: pointer; font-family: var(--fd); font-size: 14px; font-weight: 600; transition: all .15s; }
+.btn-primary { background: var(--lime); color: #080a0f; }
+.btn-primary:hover { background: var(--lime2); }
+.btn-ghost { background: var(--s2); color: var(--t2); border: 1px solid var(--b1); }
+.btn-ghost:hover { color: var(--t1); border-color: var(--b2); }
+.btn-danger { background: rgba(255,59,92,.15); color: var(--red); border: 1px solid rgba(255,59,92,.3); }
+.btn-full { width: 100%; }
+.btn-sm { padding: 7px 14px; font-size: 12px; }
+.btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn { width: 36px; height: 36px; border-radius: var(--r); background: var(--s2); border: 1px solid var(--b1); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--t2); transition: all .15s; }
+.icon-btn:hover { color: var(--t1); border-color: var(--b2); }
+.icon-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── CHIPS ────────────────────────────────────────────────────────── */
+.chip-row { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; }
+.chip { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--b1); background: var(--s2); color: var(--t2); font-size: 12px; cursor: pointer; transition: all .12s; font-weight: 500; user-select: none; }
+.chip:hover { border-color: var(--b2); color: var(--t1); }
+.chip.on { background: rgba(200,241,53,.1); border-color: var(--lime); color: var(--lime); }
+
+/* ── TAGS ─────────────────────────────────────────────────────────── */
+.tag { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.tag-lime { background: rgba(200,241,53,.1); color: var(--lime); border: 1px solid rgba(200,241,53,.25); }
+.tag-blue { background: rgba(59,130,246,.1); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+.tag-red { background: rgba(255,59,92,.1); color: var(--red); border: 1px solid rgba(255,59,92,.25); }
+.tag-purple { background: rgba(139,92,246,.1); color: #a78bfa; border: 1px solid rgba(139,92,246,.25); }
+.tag-orange { background: rgba(249,115,22,.1); color: #fb923c; border: 1px solid rgba(249,115,22,.25); }
+
+/* ── PROGRESS BAR ─────────────────────────────────────────────────── */
+.progress-bar { height: 6px; background: var(--s3); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; background: var(--lime); transition: width .5s ease; }
+.progress-fill.red { background: var(--red); }
+.progress-fill.blue { background: var(--blue); }
+
+/* ── MODAL ────────────────────────────────────────────────────────── */
+#modal { position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 300; display: none; align-items: flex-end; justify-content: center; padding: 0; }
+#modal.show { display: flex; }
+@media (min-width: 500px) { #modal { align-items: center; padding: 20px; } }
+.modal-box { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r2) var(--r2) 0 0; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+@media (min-width: 500px) { .modal-box { border-radius: var(--r2); } }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid var(--b1); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--s1); z-index: 1; }
+.modal-title { font-size: 17px; font-weight: 700; }
+.modal-body { padding: 20px; }
+
+/* ── TOAST ────────────────────────────────────────────────────────── */
+#toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px); background: var(--s1); border: 1px solid var(--lime); color: var(--t1); padding: 12px 20px; border-radius: var(--r2); font-size: 13px; font-weight: 500; z-index: 500; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 32px rgba(0,0,0,.4); transition: transform .25s ease; white-space: nowrap; }
+#toast.show { transform: translateX(-50%) translateY(0); }
+#toast.error { border-color: var(--red); }
+
+/* ── LOADER ───────────────────────────────────────────────────────── */
+.spinner { width: 22px; height: 22px; border: 2px solid var(--b2); border-top-color: var(--lime); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-page { display: flex; align-items: center; justify-content: center; padding: 60px 20px; gap: 12px; color: var(--t3); }
+
+/* ── AUTH PAGE ────────────────────────────────────────────────────── */
+#auth-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background: var(--bg); }
+.auth-logo { font-family: var(--fm); font-size: 28px; font-weight: 700; color: var(--lime); margin-bottom: 8px; letter-spacing: -.02em; }
+.auth-tagline { font-size: 13px; color: var(--t3); margin-bottom: 40px; }
+.auth-box { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r3); padding: 28px; width: 100%; max-width: 380px; }
+.auth-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.auth-sub { font-size: 13px; color: var(--t2); margin-bottom: 24px; }
+.auth-switch { text-align: center; margin-top: 20px; font-size: 13px; color: var(--t3); }
+.auth-switch span { color: var(--lime); cursor: pointer; font-weight: 600; }
+.divider { height: 1px; background: var(--b1); margin: 16px 0; }
+
+/* ── EXERCISE CARD ────────────────────────────────────────────────── */
+.ex-card { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r2); padding: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: border-color .15s; }
+.ex-card:hover { border-color: var(--b2); }
+.ex-icon { width: 48px; height: 48px; border-radius: var(--r); background: var(--s3); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+.ex-info { flex: 1; min-width: 0; }
+.ex-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ex-muscles { font-size: 11px; color: var(--t3); margin-top: 3px; }
+.ex-badges { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+
+/* ── WORKOUT CARD ─────────────────────────────────────────────────── */
+.workout-card { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r2); padding: 16px; margin-bottom: 10px; }
+.workout-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.workout-name { font-weight: 700; font-size: 16px; }
+.workout-date { font-size: 11px; color: var(--t3); margin-top: 2px; }
+.workout-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+.workout-stat { font-size: 12px; color: var(--t2); display: flex; align-items: center; gap: 5px; }
+
+/* ── IMC GAUGE ────────────────────────────────────────────────────── */
+.imc-gauge { position: relative; width: 160px; height: 80px; margin: 0 auto 12px; }
+.imc-value { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); font-family: var(--fm); font-size: 26px; font-weight: 700; }
+.imc-label { text-align: center; font-size: 12px; color: var(--t2); margin-top: 4px; }
+
+/* ── MACROS PIE ───────────────────────────────────────────────────── */
+.macros-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.macro-item { background: var(--s2); border: 1px solid var(--b1); border-radius: var(--r); padding: 12px; text-align: center; }
+.macro-val { font-family: var(--fm); font-size: 20px; font-weight: 700; }
+.macro-label { font-size: 10px; color: var(--t3); text-transform: uppercase; letter-spacing: .08em; margin-top: 3px; }
+.macro-pct { font-size: 11px; color: var(--t2); margin-top: 2px; }
+
+/* ── SEARCH ───────────────────────────────────────────────────────── */
+.search-wrap { position: relative; margin-bottom: 14px; }
+.search-wrap input { padding-left: 40px !important; }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+.search-icon svg { width: 16px; height: 16px; stroke: var(--t3); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── FILTERS ──────────────────────────────────────────────────────── */
+.filter-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
+.filter-chip { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--b1); background: var(--s2); color: var(--t3); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all .12s; }
+.filter-chip.on { background: rgba(200,241,53,.1); border-color: var(--lime); color: var(--lime); }
+
+/* ── SET ROW ──────────────────────────────────────────────────────── */
+.set-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--b1); }
+.set-row:last-child { border-bottom: none; }
+.set-num { font-family: var(--fm); font-size: 12px; color: var(--t3); min-width: 24px; }
+.set-input { flex: 1; background: var(--s2); border: 1px solid var(--b1); border-radius: var(--r); color: var(--t1); padding: 8px 10px; font-size: 14px; font-family: var(--fm); text-align: center; outline: none; }
+.set-input:focus { border-color: var(--lime); }
+.set-unit { font-size: 11px; color: var(--t3); min-width: 24px; }
+
+/* ── PROFILE HEADER ───────────────────────────────────────────────── */
+.profile-header { display: flex; align-items: center; gap: 16px; padding: 20px; background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r2); margin-bottom: 16px; }
+.avatar { width: 60px; height: 60px; border-radius: 50%; background: var(--s3); border: 2px solid var(--lime); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: var(--lime); flex-shrink: 0; font-family: var(--fm); }
+.profile-name { font-size: 18px; font-weight: 700; }
+.profile-level { font-size: 12px; color: var(--t2); margin-top: 3px; }
+
+/* ── NOTIFICATION DOT ─────────────────────────────────────────────── */
+.notif-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); position: absolute; top: 6px; right: 6px; }
+
+/* ── CHART WRAPPER ────────────────────────────────────────────────── */
+.chart-wrap { position: relative; height: 200px; margin-top: 12px; }
+
+/* ── EMPTY STATE ──────────────────────────────────────────────────── */
+.empty-state { text-align: center; padding: 48px 20px; color: var(--t3); }
+.empty-state svg { width: 48px; height: 48px; stroke: var(--t3); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; margin: 0 auto 14px; opacity: .4; display: block; }
+.empty-state h3 { font-size: 16px; font-weight: 600; color: var(--t2); margin-bottom: 6px; }
+.empty-state p { font-size: 13px; line-height: 1.6; }
+
+/* ── PROGRAM CARD ─────────────────────────────────────────────────── */
+.prog-card { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r2); padding: 16px; margin-bottom: 10px; cursor: pointer; transition: border-color .15s; }
+.prog-card:hover { border-color: var(--lime); }
+.prog-card.active { border-color: var(--lime); background: rgba(200,241,53,.04); }
+.prog-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.prog-name { font-weight: 700; font-size: 15px; }
+.prog-meta { font-size: 12px; color: var(--t2); margin-top: 3px; }
+.prog-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ── TOGGLE ───────────────────────────────────────────────────────── */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--b1); }
+.toggle-row:last-child { border-bottom: none; }
+.toggle { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-slider { position: absolute; inset: 0; background: var(--s3); border-radius: 13px; cursor: pointer; transition: .2s; }
+.toggle-slider::before { content: ''; position: absolute; height: 20px; width: 20px; left: 3px; top: 3px; background: var(--t3); border-radius: 50%; transition: .2s; }
+.toggle input:checked + .toggle-slider { background: var(--lime); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: #080a0f; }
+
+/* ── BMI COLORS ───────────────────────────────────────────────────── */
+.bmi-underweight { color: #60a5fa; }
+.bmi-normal { color: var(--lime); }
+.bmi-overweight { color: var(--orange); }
+.bmi-obese { color: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- AUTH PAGE -->
+<div id="auth-page" style="display:none">
+  <div class="auth-logo">FitTrack<span style="color:var(--t2)">Pro</span></div>
+  <div class="auth-tagline">Entraînement · Nutrition · Performance</div>
+  <div class="auth-box">
+    <div id="auth-login">
+      <div class="auth-title">Connexion</div>
+      <div class="auth-sub">Reprenez là où vous vous êtes arrêté.</div>
+      <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="votre@email.com"></div>
+      <div class="field"><label>Mot de passe</label><input type="password" id="login-password" placeholder="••••••••"></div>
+      <button class="btn btn-primary btn-full" onclick="login()">Se connecter</button>
+      <div class="auth-switch">Pas encore de compte ? <span onclick="showRegister()">S'inscrire</span></div>
+    </div>
+    <div id="auth-register" style="display:none">
+      <div class="auth-title">Inscription</div>
+      <div class="auth-sub">Créez votre profil de performance.</div>
+      <div class="g2" style="gap:12px">
+        <div class="field"><label>Prénom</label><input type="text" id="reg-firstname" placeholder="Jean"></div>
+        <div class="field"><label>Nom</label><input type="text" id="reg-lastname" placeholder="Dupont"></div>
+      </div>
+      <div class="field"><label>Email</label><input type="email" id="reg-email" placeholder="votre@email.com"></div>
+      <div class="field"><label>Mot de passe</label><input type="password" id="reg-password" placeholder="8 caractères min."></div>
+      <button class="btn btn-primary btn-full" onclick="register()">Créer mon compte</button>
+      <div class="auth-switch">Déjà un compte ? <span onclick="showLogin()">Se connecter</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+  <nav id="nav">
+    <button class="nb on" onclick="go('dashboard')" id="nb-dashboard">
+      <div class="nb-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+      Dashboard
+    </button>
+    <button class="nb" onclick="go('workout')" id="nb-workout">
+      <div class="nb-icon"><svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div>
+      Séance
+    </button>
+    <button class="nb" onclick="go('programs')" id="nb-programs">
+      <div class="nb-icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+      Programmes
+    </button>
+    <button class="nb" onclick="go('exercises')" id="nb-exercises">
+      <div class="nb-icon"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+      Exercices
+    </button>
+    <button class="nb" onclick="go('nutrition')" id="nb-nutrition">
+      <div class="nb-icon"><svg viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg></div>
+      Nutrition
+    </button>
+    <button class="nb" onclick="go('profile')" id="nb-profile">
+      <div class="nb-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      Profil
+    </button>
+  </nav>
+  <main id="main">
+    <div class="loading-page"><div class="spinner"></div></div>
+  </main>
+</div>
+
+<div id="toast"></div>
+<div id="modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title"></div>
+      <button class="icon-btn" onclick="closeModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE ──────────────────────────────────────────────────────────
+const SURL = 'https://ypgmgfxioyjpvunirtua.supabase.co';
+const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwZ21nZnhpb3lqcHZ1bmlydHVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjU3OTMsImV4cCI6MjA5Njc0MTc5M30.-kqPfV5tj6RyxpdIVBnyOzHu_sxjR7jau3z_l7-9OHA';
+const sb = supabase.createClient(SURL, SKEY);
+
+// ── STATE ─────────────────────────────────────────────────────────────
+let state = {
+  tab: 'dashboard',
+  user: null,
+  profile: null,
+  exercises: [],
+  programs: [],
+  workouts: [],
+  currentWorkout: null,
+  notifications: [],
+};
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+function toast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = (type === 'ok' ? '✓ ' : '✗ ') + msg;
+  el.className = 'show' + (type === 'error' ? ' error' : '');
+  setTimeout(() => el.className = '', 3000);
+}
+
+function openModal(title, html) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function fmtDuration(secs) {
+  if (!secs) return '--';
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return m > 0 ? `${m}min ${s}s` : `${s}s`;
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────
+function showLogin() {
+  document.getElementById('auth-login').style.display = 'block';
+  document.getElementById('auth-register').style.display = 'none';
+}
+
+function showRegister() {
+  document.getElementById('auth-login').style.display = 'none';
+  document.getElementById('auth-register').style.display = 'block';
+}
+
+async function login() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  if (!email || !password) { toast('Remplissez tous les champs', 'error'); return; }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { toast(error.message, 'error'); return; }
+  state.user = data.user;
+  await initApp();
+}
+
+async function register() {
+  const firstname = document.getElementById('reg-firstname').value;
+  const lastname = document.getElementById('reg-lastname').value;
+  const email = document.getElementById('reg-email').value;
+  const password = document.getElementById('reg-password').value;
+  if (!firstname || !email || !password) { toast('Remplissez tous les champs', 'error'); return; }
+  const { data, error } = await sb.auth.signUp({
+    email, password,
+    options: { data: { full_name: `${firstname} ${lastname}` } }
+  });
+  if (error) { toast(error.message, 'error'); return; }
+  state.user = data.user;
+  toast('Compte créé ! Complétez votre profil.');
+  await initApp();
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  state.user = null;
+  state.profile = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-page').style.display = 'flex';
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    state.user = session.user;
+    document.getElementById('auth-page').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    await initApp();
+  } else {
+    document.getElementById('auth-page').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+}
+
+async function initApp() {
+  document.getElementById('auth-page').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  await Promise.all([loadProfile(), loadExercises(), loadWorkouts(), loadPrograms()]);
+  go('dashboard');
+}
+
+async function loadProfile() {
+  const { data } = await sb.from('profiles').select('*').eq('id', state.user.id).single();
+  state.profile = data;
+}
+
+async function loadExercises() {
+  const { data } = await sb.from('exercises').select('*, exercise_categories(name, icon, color)').order('name');
+  state.exercises = data || [];
+}
+
+async function loadWorkouts() {
+  const { data } = await sb.from('workouts').select('*, workout_sets(*)').eq('user_id', state.user.id).order('started_at', { ascending: false }).limit(20);
+  state.workouts = data || [];
+}
+
+async function loadPrograms() {
+  const { data } = await sb.from('programs').select('*, program_days(*, program_exercises(*, exercises(name, exercise_categories(name,icon))))').or(`user_id.eq.${state.user.id},is_template.eq.true`).order('created_at', { ascending: false });
+  state.programs = data || [];
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────
+function go(tab) {
+  state.tab = tab;
+  document.querySelectorAll('.nb').forEach(b => b.classList.remove('on'));
+  const btn = document.getElementById('nb-' + tab);
+  if (btn) btn.classList.add('on');
+  render();
+}
+
+function render() {
+  const m = document.getElementById('main');
+  if (state.tab === 'dashboard') m.innerHTML = renderDashboard();
+  else if (state.tab === 'workout') m.innerHTML = renderWorkout();
+  else if (state.tab === 'programs') m.innerHTML = renderPrograms();
+  else if (state.tab === 'exercises') m.innerHTML = renderExercises();
+  else if (state.tab === 'nutrition') m.innerHTML = renderNutrition();
+  else if (state.tab === 'profile') m.innerHTML = renderProfile();
+  else if (state.tab === 'history') m.innerHTML = renderHistory();
+  else if (state.tab === 'progress') m.innerHTML = renderProgress();
+  // Init charts after render
+  setTimeout(() => initCharts(), 50);
+}
+
+// ── CALCULATORS ───────────────────────────────────────────────────────
+function calcBMI(weight, height) {
+  if (!weight || !height) return null;
+  return weight / Math.pow(height / 100, 2);
+}
+
+function getBMICategory(bmi) {
+  if (bmi < 18.5) return { label: 'Insuffisance pondérale', class: 'bmi-underweight', color: '#60a5fa' };
+  if (bmi < 25) return { label: 'Poids normal', class: 'bmi-normal', color: '#c8f135' };
+  if (bmi < 30) return { label: 'Surpoids', class: 'bmi-overweight', color: '#f97316' };
+  return { label: 'Obésité', class: 'bmi-obese', color: '#ff3b5c' };
+}
+
+function calcBMR(profile) {
+  if (!profile?.weight_kg || !profile?.height_cm || !profile?.date_of_birth || !profile?.gender) return null;
+  const age = Math.floor((new Date() - new Date(profile.date_of_birth)) / (365.25 * 24 * 3600 * 1000));
+  // Mifflin-St Jeor
+  if (profile.gender === 'homme') {
+    return 10 * profile.weight_kg + 6.25 * profile.height_cm - 5 * age + 5;
+  } else {
+    return 10 * profile.weight_kg + 6.25 * profile.height_cm - 5 * age - 161;
+  }
+}
+
+function getActivityMultiplier(level) {
+  const m = { sedentaire: 1.2, leger: 1.375, modere: 1.55, actif: 1.725, tres_actif: 1.9 };
+  return m[level] || 1.55;
+}
+
+function calcTDEE(profile) {
+  const bmr = calcBMR(profile);
+  if (!bmr) return null;
+  return Math.round(bmr * getActivityMultiplier(profile.activity_level));
+}
+
+function calcMacros(tdee, objective) {
+  if (!tdee) return null;
+  let calories = tdee;
+  if (objective === 'seche') calories = Math.round(tdee * 0.85);
+  if (objective === 'prise_de_masse') calories = Math.round(tdee * 1.1);
+  const protein = Math.round(calories * 0.30 / 4);
+  const fat = Math.round(calories * 0.25 / 9);
+  const carbs = Math.round((calories - protein * 4 - fat * 9) / 4);
+  return { calories, protein, carbs, fat };
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────
+function renderDashboard() {
+  const p = state.profile;
+  const bmi = p ? calcBMI(p.weight_kg, p.height_cm) : null;
+  const bmiCat = bmi ? getBMICategory(bmi) : null;
+  const tdee = calcTDEE(p);
+  const macros = calcMacros(tdee, p?.objective);
+  const lastName = state.workouts.length;
+  const totalVol = state.workouts.reduce((s, w) => s + (w.total_volume_kg || 0), 0);
+  const weekWorkouts = state.workouts.filter(w => new Date(w.started_at) >= new Date(Date.now() - 7 * 24 * 3600 * 1000)).length;
+
+  const name = p?.full_name?.split(' ')[0] || state.user?.email?.split('@')[0] || 'Athlète';
+
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+    <div>
+      <div style="font-size:13px;color:var(--t3);margin-bottom:4px">${getGreeting()}</div>
+      <div class="page-title">${name} 👋</div>
+    </div>
+    <div style="position:relative">
+      <button class="icon-btn" onclick="go('profile')">
+        <svg viewBox="0 0 24 24"><path d="M18 20v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-val">${weekWorkouts}</div>
+      <div class="stat-label">Séances / semaine</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">${lastName}</div>
+      <div class="stat-label">Séances totales</div>
+    </div>
+  </div>
+
+  ${bmi ? `
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">IMC — Classification OMS</div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div style="text-align:center">
+        <div class="stat-val ${bmiCat.class}" style="font-size:36px">${bmi.toFixed(1)}</div>
+        <div style="font-size:12px;color:var(--t2);margin-top:4px">${bmiCat.label}</div>
+      </div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-bottom:4px">
+          <span>16</span><span>18.5</span><span>25</span><span>30</span><span>40</span>
+        </div>
+        <div style="height:10px;border-radius:5px;background:linear-gradient(to right,#60a5fa,#c8f135,#f97316,#ff3b5c);position:relative">
+          <div style="position:absolute;top:-2px;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #080a0f;left:calc(${Math.min(Math.max((bmi-16)/(40-16)*100,0),100)}% - 7px);transition:left .4s ease"></div>
+        </div>
+        <div style="font-size:11px;color:var(--t3);margin-top:8px">
+          ${p.weight_kg}kg · ${p.height_cm}cm
+        </div>
+      </div>
+    </div>
+  </div>` : `
+  <div class="card" style="text-align:center;padding:20px;margin-bottom:12px">
+    <div style="font-size:13px;color:var(--t2);margin-bottom:12px">Complétez votre profil pour voir votre IMC</div>
+    <button class="btn btn-primary btn-sm" onclick="go('profile')">Compléter le profil</button>
+  </div>`}
+
+  ${macros ? `
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">Objectif : ${getObjectiveLabel(p?.objective)} · ${macros.calories} kcal/jour</div>
+    <div class="macros-grid">
+      <div class="macro-item">
+        <div class="macro-val" style="color:#60a5fa">${macros.protein}g</div>
+        <div class="macro-label">Protéines</div>
+        <div class="macro-pct">30%</div>
+      </div>
+      <div class="macro-item">
+        <div class="macro-val" style="color:var(--lime)">${macros.carbs}g</div>
+        <div class="macro-label">Glucides</div>
+        <div class="macro-pct">45%</div>
+      </div>
+      <div class="macro-item">
+        <div class="macro-val" style="color:var(--orange)">${macros.fat}g</div>
+        <div class="macro-label">Lipides</div>
+        <div class="macro-pct">25%</div>
+      </div>
+    </div>
+  </div>` : ''}
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div class="section-title" style="margin:0">Dernières séances</div>
+    <button class="btn btn-ghost btn-sm" onclick="go('history')">Tout voir</button>
+  </div>
+  ${state.workouts.length === 0 ? `
+  <div class="empty-state">
+    <svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+    <h3>Aucune séance</h3>
+    <p>Commencez votre première séance d'entraînement !</p>
+  </div>
+  <button class="btn btn-primary btn-full" onclick="go('workout')" style="margin-top:12px">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Démarrer une séance
+  </button>` :
+  state.workouts.slice(0, 3).map(w => renderWorkoutCard(w)).join('')}
+
+  <div class="section-title">Performance</div>
+  <div class="card">
+    <div class="card-title">Volume total (30 derniers jours)</div>
+    <div class="chart-wrap">
+      <canvas id="chart-volume"></canvas>
+    </div>
+  </div>`;
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Bonjour';
+  if (h < 18) return 'Bon après-midi';
+  return 'Bonsoir';
+}
+
+function getObjectiveLabel(obj) {
+  const m = { seche: 'Sèche', maintien: 'Maintien', prise_de_masse: 'Prise de masse' };
+  return m[obj] || 'Non défini';
+}
+
+function renderWorkoutCard(w) {
+  const sets = w.workout_sets?.length || 0;
+  const dur = w.duration_seconds ? fmtDuration(w.duration_seconds) : '--';
+  return `
+  <div class="workout-card">
+    <div class="workout-header">
+      <div>
+        <div class="workout-name">${w.name}</div>
+        <div class="workout-date">${fmtDate(w.started_at)}</div>
+      </div>
+      ${w.feeling ? `<div style="font-size:20px">${['😐','🙂','😊','💪','🔥'][w.feeling-1]}</div>` : ''}
+    </div>
+    <div class="workout-stats">
+      <div class="workout-stat">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        ${dur}
+      </div>
+      <div class="workout-stat">
+        <svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+        ${sets} séries
+      </div>
+      ${w.total_volume_kg ? `<div class="workout-stat">
+        <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
+        ${w.total_volume_kg.toFixed(0)} kg
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
+// ── WORKOUT ───────────────────────────────────────────────────────────
+function renderWorkout() {
+  if (state.currentWorkout) return renderActiveWorkout();
+  return `
+  <div class="page-title">Séance</div>
+  <div class="page-sub">Entraînement du ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+
+  <button class="btn btn-primary btn-full" onclick="startWorkout()" style="margin-bottom:20px;font-size:16px;padding:16px">
+    <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    Démarrer une séance libre
+  </button>
+
+  ${state.programs.filter(p => p.user_id === state.user.id).length > 0 ? `
+  <div class="section-title">Démarrer depuis un programme</div>
+  ${state.programs.filter(p => p.user_id === state.user.id).slice(0, 3).map(p => `
+    <div class="prog-card" onclick="startFromProgram('${p.id}')">
+      <div class="prog-header">
+        <div>
+          <div class="prog-name">${p.name}</div>
+          <div class="prog-meta">${p.days_per_week || '--'} jours/semaine · ${getDifficultyLabel(p.level)}</div>
+        </div>
+        <svg style="width:20px;height:20px;stroke:var(--lime);fill:none;stroke-width:2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </div>
+      <div class="prog-tags">
+        ${p.objective ? `<span class="tag tag-lime">${getObjectiveLabel(p.objective)}</span>` : ''}
+        ${p.location ? `<span class="tag tag-blue">${getLocationLabel(p.location)}</span>` : ''}
+      </div>
+    </div>`).join('')}` : ''}
+
+  <div class="section-title">Historique récent</div>
+  ${state.workouts.length === 0 ?
+    `<div class="empty-state"><svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><h3>Aucune séance</h3><p>Votre historique apparaîtra ici.</p></div>` :
+    state.workouts.slice(0, 5).map(w => renderWorkoutCard(w)).join('')
+  }`;
+}
+
+function getDifficultyLabel(d) {
+  const m = { debutant: 'Débutant', intermediaire: 'Intermédiaire', avance: 'Avancé' };
+  return m[d] || d;
+}
+
+function getLocationLabel(l) {
+  const m = { salle: 'Salle', maison: 'Maison', les_deux: 'Salle & Maison' };
+  return m[l] || l;
+}
+
+async function startWorkout(name = null) {
+  const workoutName = name || `Séance du ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+  const { data, error } = await sb.from('workouts').insert([{
+    user_id: state.user.id,
+    name: workoutName,
+    started_at: new Date().toISOString(),
+    location: state.profile?.training_location || 'salle'
+  }]).select().single();
+  if (error) { toast(error.message, 'error'); return; }
+  state.currentWorkout = { ...data, sets: [], exercises: [] };
+  state.workoutTimer = Date.now();
+
+  // Auto-suggérer des exercices selon objectif et lieu
+  await autoSuggestExercises();
+  render();
+}
+
+async function autoSuggestExercises() {
+  const p = state.profile;
+  const loc = p?.training_location || 'salle';
+  const obj = p?.objective || 'maintien';
+  const level = p?.experience_level || 'debutant';
+
+  // Sélection des groupes musculaires selon objectif
+  const muscleGroups = {
+    prise_de_masse: ['Poitrine', 'Dos', 'Jambes', 'Épaules', 'Biceps', 'Triceps'],
+    seche: ['Full Body', 'Cardio', 'Abdominaux', 'Jambes', 'Dos'],
+    maintien: ['Poitrine', 'Dos', 'Jambes', 'Abdominaux', 'Épaules'],
+  };
+
+  const groups = muscleGroups[obj] || muscleGroups.maintien;
+
+  // Sélectionner 6-8 exercices variés
+  const suggested = [];
+  for (const group of groups.slice(0, 4)) {
+    const exList = state.exercises.filter(ex =>
+      ex.exercise_categories?.name === group &&
+      ex.difficulty === level &&
+      (ex.location === loc || ex.location === 'les_deux')
+    );
+    if (exList.length > 0) {
+      suggested.push(exList[Math.floor(Math.random() * exList.length)]);
+    }
+  }
+
+  // Ajouter les séries auto pour chaque exercice suggéré
+  for (const ex of suggested) {
+    const sets = obj === 'prise_de_masse' ? 4 : obj === 'seche' ? 3 : 3;
+    for (let i = 1; i <= sets; i++) {
+      const { data } = await sb.from('workout_sets').insert([{
+        workout_id: state.currentWorkout.id,
+        exercise_id: ex.id,
+        set_number: i
+      }]).select().single();
+      if (data) {
+        if (!state.currentWorkout.sets) state.currentWorkout.sets = [];
+        state.currentWorkout.sets.push({ ...data, exercise_name: ex.name });
+      }
+    }
+  }
+  toast(`✓ ${suggested.length} exercices suggérés automatiquement`);
+}
+
+async function startFromProgram(programId) {
+  const program = state.programs.find(p => p.id === programId);
+  if (!program) return;
+  openModal('Choisir le jour', `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${(program.program_days || []).map(day => `
+        <button class="btn btn-ghost btn-full" onclick="closeModal();startWorkout('${day.name}')" style="justify-content:flex-start">
+          <svg style="width:16px;height:16px;stroke:var(--lime);fill:none;stroke-width:2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Jour ${day.day_number} — ${day.name}
+        </button>`).join('')}
+    </div>`);
+}
+
+function renderActiveWorkout() {
+  const w = state.currentWorkout;
+  const elapsed = Math.floor((Date.now() - state.workoutTimer) / 1000);
+  const exMap = {};
+  (w.sets || []).forEach(s => {
+    if (!exMap[s.exercise_id]) exMap[s.exercise_id] = { name: s.exercise_name, sets: [] };
+    exMap[s.exercise_id].sets.push(s);
+  });
+
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div>
+      <div class="page-title">${w.name}</div>
+      <div style="font-family:var(--fm);font-size:13px;color:var(--lime)">${fmtDuration(elapsed)}</div>
+    </div>
+    <button class="btn btn-danger btn-sm" onclick="finishWorkout()">Terminer</button>
+  </div>
+
+  <button class="btn btn-ghost btn-full" onclick="addExerciseToWorkout()" style="margin-bottom:16px">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Ajouter un exercice
+  </button>
+
+  ${Object.entries(exMap).length === 0 ? `
+  <div class="empty-state">
+    <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+    <h3>Aucun exercice</h3>
+    <p>Ajoutez des exercices à votre séance.</p>
+  </div>` :
+  Object.entries(exMap).map(([exId, ex]) => `
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-weight:700">${ex.name}</div>
+        <button class="btn btn-primary btn-sm" onclick="addSet('${exId}','${ex.name.replace(/'/g,"\\'")}')">+ Série</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:8px">
+        <div style="flex:1;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3)">Série</div>
+        <div style="flex:1;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);text-align:center">Poids (kg)</div>
+        <div style="flex:1;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);text-align:center">Reps</div>
+        <div style="width:30px"></div>
+      </div>
+      ${ex.sets.map((s, i) => `
+        <div class="set-row">
+          <div class="set-num">${i + 1}</div>
+          <input class="set-input" type="number" placeholder="0" value="${s.weight_kg || ''}" onchange="updateSet('${s.id}','weight_kg',this.value)">
+          <div class="set-unit">kg</div>
+          <input class="set-input" type="number" placeholder="0" value="${s.reps || ''}" onchange="updateSet('${s.id}','reps',this.value)">
+          <div class="set-unit">reps</div>
+          <button class="icon-btn" onclick="deleteSet('${s.id}','${exId}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>`).join('')}
+    </div>`).join('')}`;
+}
+
+function addExerciseToWorkout() {
+  openModal('Ajouter un exercice', `
+    <div class="search-wrap">
+      <div class="search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+      <input class="field" type="text" placeholder="Rechercher…" oninput="filterWorkoutExercises(this.value)" style="width:100%;background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);color:var(--t1);padding:10px 12px 10px 40px;outline:none;font-family:var(--fd)">
+    </div>
+    <div id="workout-ex-list">
+      ${state.exercises.slice(0, 15).map(ex => `
+        <div class="ex-card" onclick="selectExerciseForWorkout('${ex.id}','${ex.name.replace(/'/g,"\\'")}')">
+          <div class="ex-icon">${ex.exercise_categories?.icon || '💪'}</div>
+          <div class="ex-info">
+            <div class="ex-name">${ex.name}</div>
+            <div class="ex-muscles">${(ex.muscles_primary || []).join(', ')}</div>
+          </div>
+        </div>`).join('')}
+    </div>`);
+}
+
+function filterWorkoutExercises(q) {
+  const filtered = state.exercises.filter(ex =>
+    ex.name.toLowerCase().includes(q.toLowerCase()) ||
+    (ex.muscles_primary || []).some(m => m.toLowerCase().includes(q.toLowerCase()))
+  );
+  document.getElementById('workout-ex-list').innerHTML = filtered.slice(0, 15).map(ex => `
+    <div class="ex-card" onclick="selectExerciseForWorkout('${ex.id}','${ex.name.replace(/'/g,"\\'")}')">
+      <div class="ex-icon">${ex.exercise_categories?.icon || '💪'}</div>
+      <div class="ex-info">
+        <div class="ex-name">${ex.name}</div>
+        <div class="ex-muscles">${(ex.muscles_primary || []).join(', ')}</div>
+      </div>
+    </div>`).join('');
+}
+
+function selectExerciseForWorkout(exId, exName) {
+  closeModal();
+  addSet(exId, exName);
+}
+
+async function addSet(exId, exName) {
+  const { data, error } = await sb.from('workout_sets').insert([{
+    workout_id: state.currentWorkout.id,
+    exercise_id: exId,
+    set_number: (state.currentWorkout.sets?.filter(s => s.exercise_id === exId).length || 0) + 1
+  }]).select().single();
+  if (error) { toast(error.message, 'error'); return; }
+  if (!state.currentWorkout.sets) state.currentWorkout.sets = [];
+  state.currentWorkout.sets.push({ ...data, exercise_name: exName });
+  render();
+}
+
+async function updateSet(setId, field, value) {
+  await sb.from('workout_sets').update({ [field]: parseFloat(value) || null }).eq('id', setId);
+  const s = state.currentWorkout.sets?.find(x => x.id === setId);
+  if (s) s[field] = parseFloat(value) || null;
+}
+
+async function deleteSet(setId, exId) {
+  await sb.from('workout_sets').delete().eq('id', setId);
+  if (state.currentWorkout.sets) {
+    state.currentWorkout.sets = state.currentWorkout.sets.filter(s => s.id !== setId);
+  }
+  render();
+}
+
+async function finishWorkout() {
+  const elapsed = Math.floor((Date.now() - state.workoutTimer) / 1000);
+  const totalVol = (state.currentWorkout.sets || []).reduce((s, set) => s + (set.weight_kg || 0) * (set.reps || 0), 0);
+  openModal('Terminer la séance', `
+    <div class="field"><label>Ressenti</label>
+      <div class="chip-row" id="feeling-chips">
+        ${['😐 Moyen','🙂 Bien','😊 Très bien','💪 Excellent','🔥 Exceptionnel'].map((f,i) => `
+          <div class="chip" onclick="selectFeeling(${i+1})" id="feel-${i+1}">${f}</div>`).join('')}
+      </div>
+    </div>
+    <div class="field"><label>Notes (facultatif)</label><textarea id="workout-notes" placeholder="Remarques…"></textarea></div>
+    <div style="background:var(--s2);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;gap:16px">
+      <div style="text-align:center;flex:1">
+        <div style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--lime)">${fmtDuration(elapsed)}</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:3px">DURÉE</div>
+      </div>
+      <div style="text-align:center;flex:1">
+        <div style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--blue)">${(state.currentWorkout.sets||[]).length}</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:3px">SÉRIES</div>
+      </div>
+      <div style="text-align:center;flex:1">
+        <div style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--orange)">${totalVol.toFixed(0)}</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:3px">KG TOTAL</div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveWorkout(${elapsed},${totalVol})">Enregistrer la séance</button>`);
+}
+
+let selectedFeeling = 3;
+function selectFeeling(val) {
+  selectedFeeling = val;
+  document.querySelectorAll('#feeling-chips .chip').forEach(c => c.classList.remove('on'));
+  document.getElementById('feel-' + val)?.classList.add('on');
+}
+
+async function saveWorkout(elapsed, totalVol) {
+  const notes = document.getElementById('workout-notes')?.value || '';
+  await sb.from('workouts').update({
+    ended_at: new Date().toISOString(),
+    duration_seconds: elapsed,
+    total_volume_kg: totalVol,
+    feeling: selectedFeeling,
+    notes
+  }).eq('id', state.currentWorkout.id);
+  closeModal();
+  state.currentWorkout = null;
+  toast('Séance enregistrée ! 🔥');
+  await loadWorkouts();
+  go('dashboard');
+}
+
+// ── PROGRAMMES ────────────────────────────────────────────────────────
+function renderPrograms() {
+  const myPrograms = state.programs.filter(p => p.user_id === state.user.id);
+  const templates = state.programs.filter(p => p.is_template);
+
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <div class="page-title">Programmes</div>
+    <button class="btn btn-primary btn-sm" onclick="createProgram()">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Créer
+    </button>
+  </div>
+  <div class="page-sub">${myPrograms.length} programme${myPrograms.length > 1 ? 's' : ''} personnel${myPrograms.length > 1 ? 's' : ''}</div>
+
+  ${myPrograms.length === 0 ? `
+  <div class="empty-state" style="padding:32px 20px">
+    <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    <h3>Aucun programme</h3>
+    <p>Créez votre premier programme ou utilisez un modèle.</p>
+  </div>` :
+  myPrograms.map(p => renderProgramCard(p, true)).join('')}
+
+  ${templates.length > 0 ? `
+  <div class="section-title">Programmes modèles</div>
+  ${templates.map(p => renderProgramCard(p, false)).join('')}` : ''}`;
+}
+
+function renderProgramCard(p, isOwn) {
+  const days = p.program_days?.length || 0;
+  return `
+  <div class="prog-card">
+    <div class="prog-header">
+      <div style="flex:1">
+        <div class="prog-name">${p.name}</div>
+        <div class="prog-meta">${p.days_per_week || days} jours/sem · ${getDifficultyLabel(p.level)} · ${getLocationLabel(p.location)}</div>
+      </div>
+      ${isOwn ? `<button class="icon-btn" onclick="deleteProgram('${p.id}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>` : `<button class="btn btn-ghost btn-sm" onclick="copyTemplate('${p.id}')">Utiliser</button>`}
+    </div>
+    ${p.description ? `<div style="font-size:12px;color:var(--t2);margin-bottom:10px">${p.description}</div>` : ''}
+    <div class="prog-tags">
+      ${p.objective ? `<span class="tag tag-lime">${getObjectiveLabel(p.objective)}</span>` : ''}
+      ${p.location ? `<span class="tag tag-blue">${getLocationLabel(p.location)}</span>` : ''}
+      ${days > 0 ? `<span class="tag tag-purple">${days} jours</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function createProgram() {
+  openModal('Nouveau programme', `
+    <div class="field"><label>Nom *</label><input type="text" id="prog-name" placeholder="Ex: Push Pull Legs"></div>
+    <div class="field"><label>Description</label><textarea id="prog-desc" placeholder="Description du programme…" style="min-height:60px"></textarea></div>
+    <div class="g2" style="gap:12px">
+      <div class="field"><label>Objectif</label>
+        <select id="prog-obj">
+          <option value="seche">Sèche</option>
+          <option value="maintien">Maintien</option>
+          <option value="prise_de_masse" selected>Prise de masse</option>
+          <option value="force">Force</option>
+          <option value="endurance">Endurance</option>
+        </select>
+      </div>
+      <div class="field"><label>Niveau</label>
+        <select id="prog-level">
+          <option value="debutant">Débutant</option>
+          <option value="intermediaire" selected>Intermédiaire</option>
+          <option value="avance">Avancé</option>
+        </select>
+      </div>
+    </div>
+    <div class="g2" style="gap:12px">
+      <div class="field"><label>Lieu</label>
+        <select id="prog-loc">
+          <option value="salle" selected>Salle</option>
+          <option value="maison">Maison</option>
+          <option value="les_deux">Les deux</option>
+        </select>
+      </div>
+      <div class="field"><label>Jours/semaine</label>
+        <select id="prog-days">
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveProgram()">Créer le programme</button>`);
+}
+
+async function saveProgram() {
+  const name = document.getElementById('prog-name').value.trim();
+  if (!name) { toast('Entrez un nom', 'error'); return; }
+  const { data, error } = await sb.from('programs').insert([{
+    user_id: state.user.id,
+    name,
+    description: document.getElementById('prog-desc').value,
+    objective: document.getElementById('prog-obj').value,
+    level: document.getElementById('prog-level').value,
+    location: document.getElementById('prog-loc').value,
+    days_per_week: parseInt(document.getElementById('prog-days').value),
+  }]).select().single();
+  if (error) { toast(error.message, 'error'); return; }
+  closeModal();
+  toast('Programme créé !');
+  await loadPrograms();
+  render();
+}
+
+async function deleteProgram(id) {
+  if (!confirm('Supprimer ce programme ?')) return;
+  await sb.from('programs').delete().eq('id', id);
+  toast('Programme supprimé', 'error');
+  await loadPrograms();
+  render();
+}
+
+async function copyTemplate(id) {
+  const tpl = state.programs.find(p => p.id === id);
+  if (!tpl) return;
+  const { data, error } = await sb.from('programs').insert([{
+    user_id: state.user.id,
+    name: tpl.name + ' (copie)',
+    description: tpl.description,
+    objective: tpl.objective,
+    level: tpl.level,
+    location: tpl.location,
+    days_per_week: tpl.days_per_week,
+    is_template: false
+  }]).select().single();
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Programme copié dans vos programmes !');
+  await loadPrograms();
+  render();
+}
+
+// ── EXERCISES ─────────────────────────────────────────────────────────
+let exFilter = { q: '', cat: '', diff: '', loc: '' };
+
+function renderExercises() {
+  const cats = [...new Set(state.exercises.map(e => e.exercise_categories?.name).filter(Boolean))];
+  const filtered = state.exercises.filter(ex => {
+    if (exFilter.q && !ex.name.toLowerCase().includes(exFilter.q.toLowerCase()) &&
+        !(ex.muscles_primary || []).some(m => m.toLowerCase().includes(exFilter.q.toLowerCase()))) return false;
+    if (exFilter.cat && ex.exercise_categories?.name !== exFilter.cat) return false;
+    if (exFilter.diff && ex.difficulty !== exFilter.diff) return false;
+    if (exFilter.loc && ex.location !== exFilter.loc && ex.location !== 'les_deux') return false;
+    return true;
+  });
+
+  return `
+  <div class="page-title">Bibliothèque</div>
+  <div class="page-sub">${filtered.length} exercice${filtered.length > 1 ? 's' : ''} · ${state.exercises.length} au total</div>
+
+  <div class="search-wrap">
+    <div class="search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+    <input class="field" type="text" placeholder="Rechercher exercice ou muscle…" value="${exFilter.q}" oninput="exFilter.q=this.value;renderExercisesInPlace()" style="width:100%;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);color:var(--t1);padding:10px 12px 10px 40px;outline:none;font-family:var(--fd)">
+  </div>
+
+  <div class="filter-row">
+    <div class="filter-chip${!exFilter.cat?'on':''}" onclick="exFilter.cat='';renderExercisesInPlace()">Tout</div>
+    ${cats.map(c => `<div class="filter-chip${exFilter.cat===c?' on':''}" onclick="exFilter.cat='${c}';renderExercisesInPlace()">${c}</div>`).join('')}
+  </div>
+
+  <div class="filter-row">
+    <div class="filter-chip${!exFilter.diff?' on':''}" onclick="exFilter.diff='';renderExercisesInPlace()">Tous niveaux</div>
+    <div class="filter-chip${exFilter.diff==='debutant'?' on':''}" onclick="exFilter.diff='debutant';renderExercisesInPlace()">Débutant</div>
+    <div class="filter-chip${exFilter.diff==='intermediaire'?' on':''}" onclick="exFilter.diff='intermediaire';renderExercisesInPlace()">Intermédiaire</div>
+    <div class="filter-chip${exFilter.diff==='avance'?' on':''}" onclick="exFilter.diff='avance';renderExercisesInPlace()">Avancé</div>
+  </div>
+
+  <div id="ex-list">
+    ${filtered.map(ex => renderExCard(ex)).join('')}
+    ${filtered.length === 0 ? `<div class="empty-state"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><h3>Aucun résultat</h3><p>Modifiez vos filtres.</p></div>` : ''}
+  </div>`;
+}
+
+function renderExCard(ex) {
+  const diffColor = { debutant: 'tag-lime', intermediaire: 'tag-orange', avance: 'tag-red' };
+  return `
+  <div class="ex-card" onclick="showExerciseDetail('${ex.id}')">
+    <div class="ex-icon">${ex.exercise_categories?.icon || '💪'}</div>
+    <div class="ex-info">
+      <div class="ex-name">${ex.name}</div>
+      <div class="ex-muscles">${(ex.muscles_primary || []).slice(0, 2).join(', ')}</div>
+      <div class="ex-badges">
+        <span class="tag ${diffColor[ex.difficulty] || 'tag-blue'}">${getDifficultyLabel(ex.difficulty)}</span>
+        ${ex.location === 'maison' ? `<span class="tag tag-blue">Maison</span>` : ''}
+        ${ex.is_compound ? `<span class="tag tag-purple">Poly-articulaire</span>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderExercisesInPlace() {
+  if (state.tab !== 'exercises') return;
+  const cats = [...new Set(state.exercises.map(e => e.exercise_categories?.name).filter(Boolean))];
+  const filtered = state.exercises.filter(ex => {
+    if (exFilter.q && !ex.name.toLowerCase().includes(exFilter.q.toLowerCase()) &&
+        !(ex.muscles_primary || []).some(m => m.toLowerCase().includes(exFilter.q.toLowerCase()))) return false;
+    if (exFilter.cat && ex.exercise_categories?.name !== exFilter.cat) return false;
+    if (exFilter.diff && ex.difficulty !== exFilter.diff) return false;
+    if (exFilter.loc && ex.location !== exFilter.loc && ex.location !== 'les_deux') return false;
+    return true;
+  });
+  const el = document.getElementById('ex-list');
+  if (el) el.innerHTML = filtered.map(ex => renderExCard(ex)).join('') +
+    (filtered.length === 0 ? `<div class="empty-state"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><h3>Aucun résultat</h3><p>Modifiez vos filtres.</p></div>` : '');
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('on'));
+}
+
+function showExerciseDetail(exId) {
+  const ex = state.exercises.find(e => e.id === exId);
+  if (!ex) return;
+  openModal(ex.name, `
+    <div style="text-align:center;font-size:48px;margin-bottom:12px">${ex.exercise_categories?.icon || '💪'}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px">
+      <span class="tag tag-lime">${ex.exercise_categories?.name || ''}</span>
+      <span class="tag tag-blue">${getDifficultyLabel(ex.difficulty)}</span>
+      <span class="tag tag-purple">${getLocationLabel(ex.location)}</span>
+      ${ex.is_compound ? `<span class="tag tag-orange">Poly-articulaire</span>` : ''}
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="card-title">Muscles ciblés</div>
+      <div style="font-size:14px;color:var(--t2);margin-bottom:4px"><strong style="color:var(--t1)">Principal :</strong> ${(ex.muscles_primary || []).join(', ')}</div>
+      ${ex.muscles_secondary?.length ? `<div style="font-size:13px;color:var(--t3)"><strong>Secondaire :</strong> ${ex.muscles_secondary.join(', ')}</div>` : ''}
+    </div>
+    ${ex.equipment?.length ? `<div style="margin-bottom:14px">
+      <div class="card-title">Équipement</div>
+      <div style="font-size:13px;color:var(--t2)">${ex.equipment.join(', ')}</div>
+    </div>` : ''}
+    ${ex.description ? `<div style="margin-bottom:14px">
+      <div class="card-title">Description</div>
+      <div style="font-size:13px;color:var(--t2);line-height:1.6">${ex.description}</div>
+    </div>` : ''}
+    <button class="btn btn-primary btn-full" onclick="closeModal();go('workout')">Ajouter à la séance</button>`);
+}
+
+// ── NUTRITION ─────────────────────────────────────────────────────────
+function renderNutrition() {
+  const p = state.profile;
+  const bmr = calcBMR(p);
+  const tdee = calcTDEE(p);
+  const macros = calcMacros(tdee, p?.objective);
+
+  return `
+  <div class="page-title">Nutrition</div>
+  <div class="page-sub">Besoins calculés · Mifflin-St Jeor</div>
+
+  ${!p?.weight_kg ? `
+  <div class="card" style="text-align:center;padding:24px">
+    <div style="font-size:13px;color:var(--t2);margin-bottom:12px">Complétez votre profil pour calculer vos besoins nutritionnels.</div>
+    <button class="btn btn-primary" onclick="go('profile')">Compléter le profil</button>
+  </div>` : `
+  <div class="stat-grid" style="margin-bottom:12px">
+    <div class="stat-card">
+      <div class="stat-val">${bmr ? Math.round(bmr) : '--'}</div>
+      <div class="stat-label">BMR (kcal)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val red">${tdee || '--'}</div>
+      <div class="stat-label">TDEE (kcal)</div>
+    </div>
+  </div>
+
+  ${macros ? `
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">Objectif : ${getObjectiveLabel(p?.objective)}</div>
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-family:var(--fm);font-size:48px;font-weight:700;color:var(--lime)">${macros.calories}</div>
+      <div style="font-size:13px;color:var(--t2)">calories / jour</div>
+    </div>
+    <div class="macros-grid" style="margin-bottom:14px">
+      <div class="macro-item">
+        <div class="macro-val" style="color:#60a5fa">${macros.protein}g</div>
+        <div class="macro-label">Protéines</div>
+        <div class="macro-pct">${Math.round(macros.protein*4/macros.calories*100)}%</div>
+      </div>
+      <div class="macro-item">
+        <div class="macro-val" style="color:var(--lime)">${macros.carbs}g</div>
+        <div class="macro-label">Glucides</div>
+        <div class="macro-pct">${Math.round(macros.carbs*4/macros.calories*100)}%</div>
+      </div>
+      <div class="macro-item">
+        <div class="macro-val" style="color:var(--orange)">${macros.fat}g</div>
+        <div class="macro-label">Lipides</div>
+        <div class="macro-pct">${Math.round(macros.fat*9/macros.calories*100)}%</div>
+      </div>
+    </div>
+    <div class="chart-wrap" style="height:160px">
+      <canvas id="chart-macros"></canvas>
+    </div>
+  </div>` : ''}
+
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">Répartition conseillée par objectif</div>
+    ${[
+      { obj: 'seche', label: 'Sèche', cal: Math.round((tdee||0)*0.85), color: '#60a5fa' },
+      { obj: 'maintien', label: 'Maintien', cal: tdee||0, color: '#c8f135' },
+      { obj: 'prise_de_masse', label: 'Prise de masse', cal: Math.round((tdee||0)*1.1), color: '#f97316' },
+    ].map(o => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--b1)">
+        <div>
+          <div style="font-weight:600;font-size:14px">${o.label}</div>
+          <div style="font-size:11px;color:var(--t3)">
+            ${o.obj === 'seche' ? '-15% calories · Protéines élevées' :
+              o.obj === 'maintien' ? 'Équilibre · Maintien du poids' :
+              '+10% calories · Protéines modérées'}
+          </div>
+        </div>
+        <div style="font-family:var(--fm);font-size:18px;font-weight:700;color:${o.color}">${o.cal} kcal</div>
+      </div>`).join('')}
+  </div>
+
+  <div class="card">
+    <div class="card-title">Eau recommandée</div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="font-family:var(--fm);font-size:36px;font-weight:700;color:var(--blue)">2.5L</div>
+      <div style="flex:1">
+        <div style="font-size:13px;color:var(--t2);margin-bottom:8px">Minimum quotidien · +500ml en cas d'entraînement</div>
+        <div class="progress-bar"><div class="progress-fill blue" style="width:70%"></div></div>
+      </div>
+    </div>
+  </div>`}`;
+}
+
+// ── PROFIL ────────────────────────────────────────────────────────────
+function renderProfile() {
+  const p = state.profile;
+  const bmi = p ? calcBMI(p.weight_kg, p.height_cm) : null;
+  const bmiCat = bmi ? getBMICategory(bmi) : null;
+  const initial = p?.full_name ? p.full_name[0].toUpperCase() : '?';
+
+  return `
+  <div class="profile-header">
+    <div class="avatar">${initial}</div>
+    <div>
+      <div class="profile-name">${p?.full_name || 'Athlète'}</div>
+      <div class="profile-level">${getDifficultyLabel(p?.experience_level)} · ${getObjectiveLabel(p?.objective)}</div>
+      <div style="font-size:12px;color:var(--t3);margin-top:2px">${state.user?.email}</div>
+    </div>
+  </div>
+
+  <div class="section-title">Informations physiques</div>
+  <div class="card">
+    <div class="g2" style="gap:12px;margin-bottom:12px">
+      <div class="field" style="margin:0"><label>Taille (cm)</label>
+        <input type="number" value="${p?.height_cm || ''}" placeholder="175" id="p-height" onchange="updateProfile('height_cm',this.value)">
+      </div>
+      <div class="field" style="margin:0"><label>Poids (kg)</label>
+        <input type="number" value="${p?.weight_kg || ''}" placeholder="75" id="p-weight" step="0.1" onchange="updateProfile('weight_kg',this.value)">
+      </div>
+    </div>
+    <div class="g2" style="gap:12px;margin-bottom:12px">
+      <div class="field" style="margin:0"><label>Date de naissance</label>
+        <input type="date" value="${p?.date_of_birth || ''}" id="p-dob" onchange="updateProfile('date_of_birth',this.value)">
+      </div>
+      <div class="field" style="margin:0"><label>Genre</label>
+        <select id="p-gender" onchange="updateProfile('gender',this.value)">
+          <option value="">--</option>
+          <option value="homme" ${p?.gender==='homme'?'selected':''}>Homme</option>
+          <option value="femme" ${p?.gender==='femme'?'selected':''}>Femme</option>
+          <option value="autre" ${p?.gender==='autre'?'selected':''}>Autre</option>
+        </select>
+      </div>
+    </div>
+    ${bmi ? `
+    <div style="background:var(--s2);border-radius:var(--r);padding:12px;display:flex;align-items:center;gap:12px">
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3)">IMC</div>
+        <div style="font-family:var(--fm);font-size:24px;font-weight:700" class="${bmiCat.class}">${bmi.toFixed(1)}</div>
+      </div>
+      <div style="font-size:13px;color:var(--t2)">${bmiCat.label}</div>
+    </div>` : ''}
+  </div>
+
+  <div class="section-title">Objectifs & Entraînement</div>
+  <div class="card">
+    <div class="field"><label>Objectif principal</label>
+      <select id="p-obj" onchange="updateProfile('objective',this.value)">
+        <option value="seche" ${p?.objective==='seche'?'selected':''}>Sèche</option>
+        <option value="maintien" ${p?.objective==='maintien'?'selected':''}>Maintien</option>
+        <option value="prise_de_masse" ${p?.objective==='prise_de_masse'?'selected':''}>Prise de masse</option>
+      </select>
+    </div>
+    <div class="g2" style="gap:12px">
+      <div class="field"><label>Niveau</label>
+        <select id="p-level" onchange="updateProfile('experience_level',this.value)">
+          <option value="debutant" ${p?.experience_level==='debutant'?'selected':''}>Débutant</option>
+          <option value="intermediaire" ${p?.experience_level==='intermediaire'?'selected':''}>Intermédiaire</option>
+          <option value="avance" ${p?.experience_level==='avance'?'selected':''}>Avancé</option>
+        </select>
+      </div>
+      <div class="field"><label>Lieu d'entraîn.</label>
+        <select id="p-loc" onchange="updateProfile('training_location',this.value)">
+          <option value="salle" ${p?.training_location==='salle'?'selected':''}>Salle</option>
+          <option value="maison" ${p?.training_location==='maison'?'selected':''}>Maison</option>
+          <option value="les_deux" ${p?.training_location==='les_deux'?'selected':''}>Les deux</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Niveau d'activité</label>
+      <select id="p-activity" onchange="updateProfile('activity_level',this.value)">
+        <option value="sedentaire" ${p?.activity_level==='sedentaire'?'selected':''}>Sédentaire (bureau, peu de sport)</option>
+        <option value="leger" ${p?.activity_level==='leger'?'selected':''}>Légèrement actif (1-3j/sem)</option>
+        <option value="modere" ${p?.activity_level==='modere'?'selected':''}>Modérément actif (3-5j/sem)</option>
+        <option value="actif" ${p?.activity_level==='actif'?'selected':''}>Très actif (6-7j/sem)</option>
+        <option value="tres_actif" ${p?.activity_level==='tres_actif'?'selected':''}>Extrêmement actif (athlète)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section-title">Statistiques</div>
+  <div class="stat-grid-3">
+    <div class="stat-card">
+      <div class="stat-val">${state.workouts.length}</div>
+      <div class="stat-label">Séances</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val blue">${Math.round(state.workouts.reduce((s,w)=>(s+(w.duration_seconds||0)),0)/3600)}h</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val orange">${Math.round(state.workouts.reduce((s,w)=>(s+(w.total_volume_kg||0)),0)/1000)}T</div>
+      <div class="stat-label">Volume</div>
+    </div>
+  </div>
+
+  <div class="section-title">Compte</div>
+  <div class="card">
+    <div class="toggle-row">
+      <div><div style="font-weight:500">Notifications push</div><div style="font-size:12px;color:var(--t3)">Rappels d'entraînement</div></div>
+      <label class="toggle"><input type="checkbox" id="notif-toggle"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div><div style="font-weight:500">Mode sombre</div><div style="font-size:12px;color:var(--t3)">Interface sombre (actif)</div></div>
+      <label class="toggle"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+    </div>
+  </div>
+
+  <button class="btn btn-danger btn-full" onclick="logout()" style="margin-top:16px">
+    <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    Se déconnecter
+  </button>`;
+}
+
+async function updateProfile(field, value) {
+  const update = { [field]: field.includes('_kg') || field.includes('_cm') ? parseFloat(value) : value, updated_at: new Date().toISOString() };
+  const { error } = await sb.from('profiles').update(update).eq('id', state.user.id);
+  if (error) { toast(error.message, 'error'); return; }
+  if (!state.profile) state.profile = { id: state.user.id };
+  state.profile = { ...state.profile, ...update };
+  toast('Profil mis à jour ✓');
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────────
+function renderHistory() {
+  return `
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+    <button class="icon-btn" onclick="go('dashboard')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="page-title">Historique</div>
+  </div>
+  <div class="page-sub">${state.workouts.length} séance${state.workouts.length > 1 ? 's' : ''} enregistrée${state.workouts.length > 1 ? 's' : ''}</div>
+
+  ${state.workouts.length === 0 ?
+  `<div class="empty-state">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <h3>Aucune séance</h3>
+    <p>Votre historique d'entraînement apparaîtra ici.</p>
+  </div>` :
+  state.workouts.map(w => renderWorkoutCard(w)).join('')}`;
+}
+
+// ── PROGRESS ──────────────────────────────────────────────────────────
+function renderProgress() {
+  return `
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+    <button class="icon-btn" onclick="go('dashboard')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="page-title">Progression</div>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">Volume hebdomadaire (kg)</div>
+    <div class="chart-wrap"><canvas id="chart-weekly"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Séances par semaine</div>
+    <div class="chart-wrap"><canvas id="chart-freq"></canvas></div>
+  </div>`;
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────
+function initCharts() {
+  Chart.defaults.color = '#7a8ba8';
+  Chart.defaults.borderColor = '#252f42';
+  Chart.defaults.font.family = "'Space Grotesk', sans-serif";
+
+  // Volume chart on dashboard
+  const cvEl = document.getElementById('chart-volume');
+  if (cvEl) {
+    const last30 = getLast30DaysData();
+    new Chart(cvEl, {
+      type: 'bar',
+      data: {
+        labels: last30.labels,
+        datasets: [{
+          label: 'Volume (kg)',
+          data: last30.data,
+          backgroundColor: 'rgba(200,241,53,.3)',
+          borderColor: '#c8f135',
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 0, maxTicksLimit: 6 } } } }
+    });
+  }
+
+  // Macros pie
+  const cmEl = document.getElementById('chart-macros');
+  if (cmEl) {
+    const tdee = calcTDEE(state.profile);
+    const macros = calcMacros(tdee, state.profile?.objective);
+    if (macros) {
+      new Chart(cmEl, {
+        type: 'doughnut',
+        data: {
+          labels: ['Protéines', 'Glucides', 'Lipides'],
+          datasets: [{ data: [macros.protein * 4, macros.carbs * 4, macros.fat * 9], backgroundColor: ['#60a5fa', '#c8f135', '#f97316'], borderWidth: 0 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: 12, padding: 16 } } } }
+      });
+    }
+  }
+
+  // Weekly volume
+  const cwEl = document.getElementById('chart-weekly');
+  if (cwEl) {
+    const weekly = getWeeklyVolumeData();
+    new Chart(cwEl, {
+      type: 'line',
+      data: {
+        labels: weekly.labels,
+        datasets: [{ label: 'Volume (kg)', data: weekly.data, borderColor: '#c8f135', backgroundColor: 'rgba(200,241,53,.1)', fill: true, tension: 0.4 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+  }
+
+  // Frequency
+  const cfEl = document.getElementById('chart-freq');
+  if (cfEl) {
+    const freq = getWeeklyFreqData();
+    new Chart(cfEl, {
+      type: 'bar',
+      data: {
+        labels: freq.labels,
+        datasets: [{ data: freq.data, backgroundColor: 'rgba(59,130,246,.3)', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+  }
+}
+
+function getLast30DaysData() {
+  const days = 30;
+  const labels = [];
+  const data = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    labels.push(i % 5 === 0 ? d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '');
+    const vol = state.workouts.filter(w => w.started_at?.slice(0, 10) === key).reduce((s, w) => s + (w.total_volume_kg || 0), 0);
+    data.push(vol);
+  }
+  return { labels, data };
+}
+
+function getWeeklyVolumeData() {
+  const weeks = 8;
+  const labels = [];
+  const data = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const start = new Date();
+    start.setDate(start.getDate() - i * 7 - 7);
+    const end = new Date();
+    end.setDate(end.getDate() - i * 7);
+    labels.push(`S${weeks - i}`);
+    const vol = state.workouts.filter(w => {
+      const d = new Date(w.started_at);
+      return d >= start && d < end;
+    }).reduce((s, w) => s + (w.total_volume_kg || 0), 0);
+    data.push(Math.round(vol));
+  }
+  return { labels, data };
+}
+
+function getWeeklyFreqData() {
+  const weeks = 8;
+  const labels = [];
+  const data = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const start = new Date();
+    start.setDate(start.getDate() - i * 7 - 7);
+    const end = new Date();
+    end.setDate(end.getDate() - i * 7);
+    labels.push(`S${weeks - i}`);
+    const count = state.workouts.filter(w => {
+      const d = new Date(w.started_at);
+      return d >= start && d < end;
+    }).length;
+    data.push(count);
+  }
+  return { labels, data };
+}
+
+// ── START ─────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
